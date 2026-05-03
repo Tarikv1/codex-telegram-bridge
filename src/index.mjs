@@ -15,6 +15,14 @@ import {
   verifyRolloutPath
 } from "./codex-state.mjs";
 import { openCodexThread } from "./codex-deeplink.mjs";
+import {
+  findLatestProjectFile,
+  formatBytes,
+  formatFileCaption,
+  formatFileList,
+  listProjectFiles,
+  resolveProjectFile
+} from "./file-access.mjs";
 import { createDeduper } from "./rollout-parser.mjs";
 import { RolloutTail } from "./rollout-tail.mjs";
 import { TelegramClient } from "./telegram.mjs";
@@ -152,6 +160,9 @@ async function main() {
     }
     if (command === "/threads") return listThreads(chatId, arg);
     if (command === "/current") return telegram.sendMessage(chatId, formatCurrentThread(state.boundThread));
+    if (command === "/files" || command === "/file" || command === "/latest") {
+      return handleFileCommand(chatId, command, arg);
+    }
     if (command === "/bind") {
       if (!arg) return bindCurrent(chatId);
       const thread = await resolveThreadForCommand(arg);
@@ -195,10 +206,56 @@ async function main() {
       return telegram.sendMessage(chatId, formatStatus(state.status(), {
         databasePath,
         dryRun: config.dryRun,
-        inputMode: config.inputMode
+        inputMode: config.inputMode,
+        fileAccessEnabled: config.fileAccessEnabled,
+        maxFileBytes: config.maxFileBytes
       }));
     }
     return telegram.sendMessage(chatId, `Unknown command: ${command}`);
+  }
+
+  async function handleFileCommand(chatId, command, arg) {
+    try {
+      assertFileAccessReady();
+      if (command === "/files") {
+        const files = await listProjectFiles({
+          thread: state.boundThread,
+          query: arg,
+          limit: config.fileListLimit,
+          maxFileBytes: config.maxFileBytes
+        });
+        state.noteFileList(files);
+        await audit.write("files_list", { query: arg, count: files.length });
+        return telegram.sendMessage(chatId, formatFileList(files, arg));
+      }
+
+      const file = command === "/latest"
+        ? await findLatestProjectFile({ thread: state.boundThread, query: arg, maxFileBytes: config.maxFileBytes })
+        : await resolveProjectFile({
+          thread: state.boundThread,
+          selector: arg,
+          lastFileList: state.lastFileList,
+          maxFileBytes: config.maxFileBytes
+        });
+
+      await audit.write(command === "/latest" ? "latest_file_send" : "file_send", {
+        relativePath: file.relativePath,
+        size: file.size
+      });
+      return telegram.sendDocument(chatId, file.absolutePath, {
+        filename: file.fileName,
+        caption: formatFileCaption(file)
+      });
+    } catch (error) {
+      state.lastError = error.message;
+      await audit.write("file_failed", { command, length: arg.length, error: error.message });
+      return telegram.sendMessage(chatId, `File request was not completed: ${error.message}`);
+    }
+  }
+
+  function assertFileAccessReady() {
+    if (!config.fileAccessEnabled) throw new Error("File access is disabled in the local bridge config.");
+    if (!state.boundThread) throw new Error("No Codex thread is bound. Use /threads, then /bind <number> first.");
   }
 
   async function rememberTelegramChat(chatId) {
@@ -303,7 +360,7 @@ async function main() {
   }
 }
 
-function formatStatus(status, { databasePath, dryRun, inputMode }) {
+function formatStatus(status, { databasePath, dryRun, inputMode, fileAccessEnabled, maxFileBytes }) {
   const bound = status.boundThread
     ? `${status.boundThread.title}\n${status.boundThread.id}\n${status.boundThread.rolloutPath}\n${status.boundThread.cwd || "cwd unknown"}`
     : "none";
@@ -311,6 +368,7 @@ function formatStatus(status, { databasePath, dryRun, inputMode }) {
     `Bridge status: ${status.paused ? "paused" : "active"}`,
     `Dry run: ${dryRun ? "yes" : "no"}`,
     `Input mode: ${inputMode || "unknown"}`,
+    `File access: ${fileAccessEnabled ? `enabled, ${formatBytes(maxFileBytes)} max` : "disabled"}`,
     `State DB: ${databasePath || "not discovered yet"}`,
     `Bound thread: ${bound}`,
     `Clipboard restore issue: ${status.clipboardRestoreFailed ? "yes" : "no"}`,

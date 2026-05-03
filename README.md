@@ -10,6 +10,7 @@ It mirrors human-facing Codex updates and final answers to Telegram, and it can 
 - Binds to one Codex Desktop chat at a time.
 - Mirrors visible Codex status messages and assistant answers to Telegram.
 - Sends Telegram input either through the visible Codex Desktop composer or through `codex exec resume`.
+- Sends requested files from the bound project folder to Telegram.
 - Avoids forwarding tool logs, command output, hidden reasoning, token events, user messages, and raw rollout bodies.
 
 ## Requirements
@@ -38,6 +39,7 @@ Important:
 - Do not commit local config, logs, screenshots, Codex rollout files, or Codex state databases.
 - If you need my Telegram bot token or numeric user id, tell me exactly where to paste them locally.
 - After setup, guide me through /ping, /threads, /bind, and the first test message.
+- Explain how /files, /file, and /latest work without exposing files outside the bound project folder.
 ```
 
 Codex should handle the clone, checks, config-file setup, and startup commands. You still need to provide your own Telegram bot token and numeric Telegram user id.
@@ -72,7 +74,10 @@ Example:
   "boundThreadId": null,
   "inputMode": "desktop-ui",
   "codexCommand": "codex",
-  "codexWindowProcessName": "Codex"
+  "codexWindowProcessName": "Codex",
+  "fileAccessEnabled": true,
+  "maxFileBytes": 50000000,
+  "fileListLimit": 10
 }
 ```
 
@@ -102,6 +107,25 @@ npm run dry-run
 
 In `desktop-ui` mode, keep the target Codex chat visible and idle. If Codex shows a Stop button, the bridge refuses to paste and asks you to wait until the current turn finishes.
 
+## File Requests
+
+After binding a Codex chat, you can ask Telegram for files from that chat's working folder:
+
+```text
+/files
+/files wav
+/file 1
+/file output/example.wav
+/latest .wav
+/latest html
+```
+
+`/files` lists recent sendable files with numbers. `/file 1` sends a file from the latest list. `/file <relative path>` sends a specific file. `/latest <extension or search text>` sends the newest matching file.
+
+For safety, file access is limited to the bound thread's recorded working folder. Requests outside that folder are rejected. The bridge also blocks common sensitive paths such as `.git`, `.codex`, `node_modules`, `.env`, `*.local.json`, `*.audit.ndjson`, SQLite/database files, and filenames that look like tokens, credentials, passwords, private keys, or secrets.
+
+Files are sent with Telegram `sendDocument`. The default `maxFileBytes` is `50000000`, matching Telegram's documented [Bot API file limit](https://core.telegram.org/bots/api#senddocument) for general files at the time this README was written. You can lower it in the local config.
+
 ## Input Modes
 
 `desktop-ui` is the default. It focuses Codex Desktop, finds the visible composer, pastes your Telegram text, submits it, and verifies the rollout file changed.
@@ -126,6 +150,11 @@ Switch modes from Telegram:
 /threads
 /threads example
 /current
+/files
+/files wav
+/file 1
+/file output/example.wav
+/latest .wav
 /bind
 /bind 1
 /bind <title>
@@ -149,6 +178,7 @@ Only the configured `allowedUserId` can control the bridge. Other Telegram sende
 - The bridge writes metadata-only audit logs by default.
 - Mirrored messages are limited to human-facing status updates and assistant-visible output.
 - Raw command output, tool calls, reasoning events, token events, and hidden logs are intentionally filtered out.
+- File requests are restricted to the bound project folder and are audited by relative path, size, and command metadata only.
 
 ## Troubleshooting
 
@@ -156,6 +186,7 @@ Only the configured `allowedUserId` can control the bridge. Other Telegram sende
 - `Codex desktop is still running`: wait until the current Codex turn finishes, then send again.
 - `foreground window is ... not Codex`: bring Codex Desktop to the front and retry.
 - `rollout file did not change`: the desktop composer did not accept the input; make sure the target chat is visible and idle.
+- `File request was not completed`: send `/current` to confirm the bound chat has a working folder, then use `/files` before `/file 1`.
 - No Telegram replies: send `/ping`, check that `botToken` and `allowedUserId` are correct, and confirm the bridge process is still running.
 
 ## License

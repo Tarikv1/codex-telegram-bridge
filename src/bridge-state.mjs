@@ -8,6 +8,7 @@ export class BridgeState {
     this.lastError = null;
     this.clipboardRestoreFailed = false;
     this.lastThreadList = [];
+    this.lastFileList = [];
   }
 
   bind(thread) {
@@ -29,6 +30,10 @@ export class BridgeState {
 
   noteThreadList(threads) {
     this.lastThreadList = [...threads];
+  }
+
+  noteFileList(files) {
+    this.lastFileList = [...files];
   }
 
   pause() {

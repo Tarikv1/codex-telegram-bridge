@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { test } from "node:test";
 
 import { TelegramClient } from "../src/telegram.mjs";
@@ -35,3 +38,29 @@ test("sendMessage passes an abort signal to Telegram fetch", async () => {
   }
 });
 
+test("sendDocument uploads files with multipart form data", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "codex-telegram-bridge-upload-"));
+  const filePath = path.join(root, "demo.html");
+  await mkdir(root, { recursive: true });
+  await writeFile(filePath, "<html></html>");
+
+  const previousFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async (url, options) => {
+      assert.match(String(url), /sendDocument/);
+      assert.equal(options.method, "POST");
+      assert.ok(options?.signal instanceof AbortSignal);
+      assert.ok(options.body instanceof FormData);
+      const entries = Array.from(options.body.entries());
+      assert.equal(entries.find(([key]) => key === "chat_id")?.[1], "123");
+      assert.equal(entries.find(([key]) => key === "caption")?.[1], "demo");
+      assert.equal(entries.find(([key]) => key === "document")?.[1]?.name, "demo.html");
+      return { json: async () => ({ ok: true, result: { message_id: 1 } }) };
+    };
+
+    const telegram = new TelegramClient({ botToken: "token", requestTimeoutMs: 1000 });
+    await telegram.sendDocument(123, filePath, { caption: "demo" });
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});

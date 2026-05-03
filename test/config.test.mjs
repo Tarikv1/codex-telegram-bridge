@@ -26,6 +26,9 @@ test("config loads and persists Telegram chat id plus last update id", async () 
     assert.equal(config.telegramChatId, "456");
     assert.equal(config.lastUpdateId, 100);
     assert.equal(config.inputMode, "desktop-ui");
+    assert.equal(config.fileAccessEnabled, true);
+    assert.equal(config.maxFileBytes, 50_000_000);
+    assert.equal(config.fileListLimit, 10);
 
     const next = await saveRuntimeConfig(config, { telegramChatId: "789", lastUpdateId: 101 });
     const persisted = JSON.parse(await readFile(configPath, "utf8"));
@@ -35,6 +38,9 @@ test("config loads and persists Telegram chat id plus last update id", async () 
     assert.equal(persisted.telegramChatId, "789");
     assert.equal(persisted.lastUpdateId, 101);
     assert.equal(persisted.inputMode, "desktop-ui");
+    assert.equal(persisted.fileAccessEnabled, true);
+    assert.equal(persisted.maxFileBytes, 50_000_000);
+    assert.equal(persisted.fileListLimit, 10);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

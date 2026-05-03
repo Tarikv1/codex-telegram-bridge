@@ -1,3 +1,6 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
 export class TelegramClient {
   constructor({ botToken, dryRun = false, logger = console, requestTimeoutMs = 15000 }) {
     this.botToken = botToken;
@@ -38,6 +41,32 @@ export class TelegramClient {
       const body = await response.json();
       if (!body.ok) throw new Error(`Telegram sendMessage failed: ${body.description || response.status}`);
     }
+  }
+
+  async sendDocument(chatId, filePath, { caption = "", filename = "" } = {}) {
+    if (chatId === null || chatId === undefined || String(chatId).trim() === "") {
+      throw new Error("Telegram chat id is required to send a file.");
+    }
+    const resolvedName = filename || path.basename(filePath);
+    if (this.dryRun) {
+      this.logger.log(`[dry-run telegram file -> ${chatId}] ${resolvedName}${caption ? `\n${caption}` : ""}`);
+      return;
+    }
+
+    const form = new FormData();
+    form.set("chat_id", String(chatId));
+    if (caption) form.set("caption", String(caption));
+    const bytes = await readFile(filePath);
+    form.set("document", new Blob([bytes], { type: "application/octet-stream" }), resolvedName);
+
+    const response = await fetchWithTimeout(this.apiUrl("sendDocument"), {
+      method: "POST",
+      body: form,
+      timeoutMs: Math.max(this.requestTimeoutMs, 60000),
+      label: "Telegram sendDocument"
+    });
+    const body = await response.json();
+    if (!body.ok) throw new Error(`Telegram sendDocument failed: ${body.description || response.status}`);
   }
 
   apiUrl(method, params = {}) {
