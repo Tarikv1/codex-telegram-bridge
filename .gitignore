@@ -1,0 +1,9 @@
+node_modules/
+*.log
+*.png
+.tmp/
+.env
+*.local.json
+*.audit.ndjson
+coverage/
+.DS_Store

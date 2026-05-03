@@ -1,0 +1,22 @@
+{
+  "name": "codex-telegram-bridge",
+  "version": "0.1.0",
+  "description": "Local Windows bridge for controlling a Codex desktop chat from Telegram.",
+  "private": true,
+  "type": "module",
+  "keywords": [
+    "codex",
+    "telegram",
+    "bridge",
+    "desktop",
+    "automation"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "start": "node src/index.mjs",
+    "dry-run": "node src/index.mjs --dry-run",
+    "test": "node --test"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
