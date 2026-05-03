@@ -20,10 +20,32 @@ It mirrors human-facing Codex updates and final answers to Telegram, and it can 
 - A Telegram bot token from [@BotFather](https://t.me/BotFather).
 - Your numeric Telegram user id.
 
-## Install
+## Install With Codex
+
+If you already use Codex Desktop, you can ask Codex to install this for you.
+
+Open a new Codex chat and paste:
+
+```text
+Please install and configure this project for me:
+https://github.com/Tarikv1/codex-telegram-bridge
+
+Use Windows PowerShell.
+Clone the repo into a normal local folder, run the test suite, create the local config file at %USERPROFILE%\.codex\telegram-bridge.local.json from the README template, and help me start the bridge.
+
+Important:
+- Do not commit or print my Telegram bot token.
+- Do not commit local config, logs, screenshots, Codex rollout files, or Codex state databases.
+- If you need my Telegram bot token or numeric user id, tell me exactly where to paste them locally.
+- After setup, guide me through /ping, /threads, /bind, and the first test message.
+```
+
+Codex should handle the clone, checks, config-file setup, and startup commands. You still need to provide your own Telegram bot token and numeric Telegram user id.
+
+## Manual Install
 
 ```powershell
-git clone https://github.com/<owner>/codex-telegram-bridge.git
+git clone https://github.com/Tarikv1/codex-telegram-bridge.git
 cd codex-telegram-bridge
 npm test
 ```
