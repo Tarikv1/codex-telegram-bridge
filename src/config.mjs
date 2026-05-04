@@ -38,6 +38,7 @@ export async function loadConfig(configPath = defaultConfigPath()) {
     codexWindowProcessName: parsed.codexWindowProcessName || "Codex",
     inputMode: normalizeInputMode(parsed.inputMode),
     codexCommand: parsed.codexCommand || "codex",
+    forwardStatusUpdates: parsed.forwardStatusUpdates !== false,
     fileAccessEnabled: parsed.fileAccessEnabled !== false,
     maxFileBytes: normalizeMaxFileBytes(parsed.maxFileBytes),
     fileListLimit: normalizeFileListLimit(parsed.fileListLimit)
@@ -60,6 +61,7 @@ export async function saveRuntimeConfig(config, patch) {
     codexWindowProcessName: next.codexWindowProcessName,
     inputMode: normalizeInputMode(next.inputMode),
     codexCommand: next.codexCommand || "codex",
+    forwardStatusUpdates: next.forwardStatusUpdates !== false,
     fileAccessEnabled: next.fileAccessEnabled !== false,
     maxFileBytes: normalizeMaxFileBytes(next.maxFileBytes),
     fileListLimit: normalizeFileListLimit(next.fileListLimit)

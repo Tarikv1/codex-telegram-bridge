@@ -30,6 +30,7 @@ import { sendInputToCodexWindow } from "./windows-control.mjs";
 import { HELP_TEXT } from "./help.mjs";
 import { formatPingResponse } from "./health.mjs";
 import { formatInputModeResponse, parseInputModeArg } from "./input-mode.mjs";
+import { formatUpdatesResponse, parseUpdatesArg, shouldForwardEvent } from "./output-routing.mjs";
 import { waitForFileGrowth } from "./rollout-watch.mjs";
 
 const args = new Set(process.argv.slice(2));
@@ -110,6 +111,10 @@ async function main() {
           await audit.write("forward_skipped_no_chat", { threadId: thread.id, kind: event.kind, length: event.text.length });
           return;
         }
+        if (!shouldForwardEvent(event, { forwardStatusUpdates: config.forwardStatusUpdates })) {
+          await audit.write("forward_skipped_status_disabled", { threadId: thread.id, kind: event.kind, length: event.text.length });
+          return;
+        }
         await telegram.sendMessage(targetChatId, event.text);
         state.noteForwarded(event);
         await audit.write("forwarded", { threadId: thread.id, kind: event.kind, length: event.text.length, chatId: targetChatId });
@@ -157,6 +162,18 @@ async function main() {
       config = await saveRuntimeConfig(config, { inputMode });
       await audit.write("mode", { inputMode });
       return telegram.sendMessage(chatId, formatInputModeResponse(inputMode, { changed: true }));
+    }
+    if (command === "/updates") {
+      let next;
+      try {
+        next = parseUpdatesArg(arg);
+      } catch (error) {
+        return telegram.sendMessage(chatId, error.message);
+      }
+      if (next === null) return telegram.sendMessage(chatId, formatUpdatesResponse(config.forwardStatusUpdates));
+      config = await saveRuntimeConfig(config, { forwardStatusUpdates: next });
+      await audit.write("updates", { forwardStatusUpdates: next });
+      return telegram.sendMessage(chatId, formatUpdatesResponse(next, { changed: true }));
     }
     if (command === "/threads") return listThreads(chatId, arg);
     if (command === "/current") return telegram.sendMessage(chatId, formatCurrentThread(state.boundThread));
@@ -207,6 +224,7 @@ async function main() {
         databasePath,
         dryRun: config.dryRun,
         inputMode: config.inputMode,
+        forwardStatusUpdates: config.forwardStatusUpdates,
         fileAccessEnabled: config.fileAccessEnabled,
         maxFileBytes: config.maxFileBytes
       }));
@@ -360,7 +378,7 @@ async function main() {
   }
 }
 
-function formatStatus(status, { databasePath, dryRun, inputMode, fileAccessEnabled, maxFileBytes }) {
+function formatStatus(status, { databasePath, dryRun, inputMode, forwardStatusUpdates, fileAccessEnabled, maxFileBytes }) {
   const bound = status.boundThread
     ? `${status.boundThread.title}\n${status.boundThread.id}\n${status.boundThread.rolloutPath}\n${status.boundThread.cwd || "cwd unknown"}`
     : "none";
@@ -368,6 +386,7 @@ function formatStatus(status, { databasePath, dryRun, inputMode, fileAccessEnabl
     `Bridge status: ${status.paused ? "paused" : "active"}`,
     `Dry run: ${dryRun ? "yes" : "no"}`,
     `Input mode: ${inputMode || "unknown"}`,
+    `Status updates: ${forwardStatusUpdates ? "enabled" : "disabled"}`,
     `File access: ${fileAccessEnabled ? `enabled, ${formatBytes(maxFileBytes)} max` : "disabled"}`,
     `State DB: ${databasePath || "not discovered yet"}`,
     `Bound thread: ${bound}`,

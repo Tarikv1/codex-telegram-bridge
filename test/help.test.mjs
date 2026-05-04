@@ -8,6 +8,7 @@ test("help text lists the available Telegram commands", () => {
     "/help",
     "/ping",
     "/mode",
+    "/updates",
     "/status",
     "/threads",
     "/current",

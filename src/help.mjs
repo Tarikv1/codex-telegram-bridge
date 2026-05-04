@@ -5,6 +5,9 @@ export const HELP_TEXT = `Telegram Codex bridge commands:
 /mode - show input mode
 /mode desktop-ui - paste Telegram input into the visible Codex desktop window
 /mode codex-exec - run Telegram input through codex exec resume
+/updates - show status update forwarding mode
+/updates off - stop forwarding live status updates
+/updates on - resume forwarding live status updates
 /status - show bridge state and errors
 /threads - list recent Codex desktop chats
 /threads example - search chats
@@ -28,4 +31,5 @@ export const HELP_TEXT = `Telegram Codex bridge commands:
 /stop - pause input without killing bridge
 
 Input mode defaults to desktop-ui so Telegram text appears in the visible Codex desktop chat.
+Final assistant answers are still forwarded when /updates is off.
 codex-exec mode is available for headless execution, but the desktop window may not live-update.`;

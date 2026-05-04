@@ -29,6 +29,7 @@ test("config loads and persists Telegram chat id plus last update id", async () 
     assert.equal(config.fileAccessEnabled, true);
     assert.equal(config.maxFileBytes, 50_000_000);
     assert.equal(config.fileListLimit, 10);
+    assert.equal(config.forwardStatusUpdates, true);
 
     const next = await saveRuntimeConfig(config, { telegramChatId: "789", lastUpdateId: 101 });
     const persisted = JSON.parse(await readFile(configPath, "utf8"));
@@ -41,6 +42,32 @@ test("config loads and persists Telegram chat id plus last update id", async () 
     assert.equal(persisted.fileAccessEnabled, true);
     assert.equal(persisted.maxFileBytes, 50_000_000);
     assert.equal(persisted.fileListLimit, 10);
+    assert.equal(persisted.forwardStatusUpdates, true);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("config can disable human-facing status updates while keeping answers enabled", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "telegram-bridge-config-"));
+  try {
+    const configPath = path.join(dir, "telegram-bridge.local.json");
+    await writeFile(
+      configPath,
+      JSON.stringify({
+        botToken: "token",
+        allowedUserId: "123",
+        forwardStatusUpdates: false
+      }),
+      "utf8"
+    );
+
+    const config = await loadConfig(configPath);
+    assert.equal(config.forwardStatusUpdates, false);
+
+    await saveRuntimeConfig(config, { forwardStatusUpdates: true });
+    const persisted = JSON.parse(await readFile(configPath, "utf8"));
+    assert.equal(persisted.forwardStatusUpdates, true);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

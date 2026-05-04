@@ -11,6 +11,7 @@ It mirrors human-facing Codex updates and final answers to Telegram, and it can 
 - Mirrors visible Codex status messages and assistant answers to Telegram.
 - Sends Telegram input either through the visible Codex Desktop composer or through `codex exec resume`.
 - Sends requested files from the bound project folder to Telegram.
+- Can mute live status updates while still forwarding final assistant answers.
 - Avoids forwarding tool logs, command output, hidden reasoning, token events, user messages, and raw rollout bodies.
 
 ## Requirements
@@ -73,6 +74,7 @@ Example:
   "dryRun": false,
   "boundThreadId": null,
   "inputMode": "desktop-ui",
+  "forwardStatusUpdates": true,
   "codexCommand": "codex",
   "codexWindowProcessName": "Codex",
   "fileAccessEnabled": true,
@@ -139,6 +141,20 @@ Switch modes from Telegram:
 /mode codex-exec
 ```
 
+## Status Updates
+
+By default, Telegram receives both live Codex status updates and final assistant answers. To reduce noise, turn off the live status updates:
+
+```text
+/updates off
+```
+
+Final assistant answers are still forwarded. Turn live updates back on with:
+
+```text
+/updates on
+```
+
 ## Telegram Commands
 
 ```text
@@ -147,6 +163,9 @@ Switch modes from Telegram:
 /mode
 /mode desktop-ui
 /mode codex-exec
+/updates
+/updates off
+/updates on
 /threads
 /threads example
 /current
@@ -178,6 +197,7 @@ Only the configured `allowedUserId` can control the bridge. Other Telegram sende
 - The bridge writes metadata-only audit logs by default.
 - Mirrored messages are limited to human-facing status updates and assistant-visible output.
 - Raw command output, tool calls, reasoning events, token events, and hidden logs are intentionally filtered out.
+- `/updates off` mutes live status updates only; final assistant answers continue to be forwarded.
 - File requests are restricted to the bound project folder and are audited by relative path, size, and command metadata only.
 
 ## Troubleshooting
@@ -186,6 +206,7 @@ Only the configured `allowedUserId` can control the bridge. Other Telegram sende
 - `Codex desktop is still running`: wait until the current Codex turn finishes, then send again.
 - `foreground window is ... not Codex`: bring Codex Desktop to the front and retry.
 - `rollout file did not change`: the desktop composer did not accept the input; make sure the target chat is visible and idle.
+- Too many live messages: send `/updates off`.
 - `File request was not completed`: send `/current` to confirm the bound chat has a working folder, then use `/files` before `/file 1`.
 - No Telegram replies: send `/ping`, check that `botToken` and `allowedUserId` are correct, and confirm the bridge process is still running.
 
