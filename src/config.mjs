@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { DEFAULT_MAX_FILE_BYTES } from "./file-access.mjs";
 import { normalizeInputMode } from "./input-mode.mjs";
+import { defaultLockPath } from "./single-instance.mjs";
 
 export function defaultConfigPath() {
   return path.join(os.homedir(), ".codex", "telegram-bridge.local.json");
@@ -35,6 +36,7 @@ export async function loadConfig(configPath = defaultConfigPath()) {
     telegramChatId: parsed.telegramChatId ? String(parsed.telegramChatId) : null,
     lastUpdateId: Number.isFinite(Number(parsed.lastUpdateId)) ? Number(parsed.lastUpdateId) : 0,
     auditPath: parsed.auditPath || defaultAuditPath(),
+    lockPath: parsed.lockPath || defaultLockPath(),
     codexWindowProcessName: parsed.codexWindowProcessName || "Codex",
     inputMode: normalizeInputMode(parsed.inputMode),
     codexCommand: parsed.codexCommand || "codex",
@@ -58,6 +60,7 @@ export async function saveRuntimeConfig(config, patch) {
     telegramChatId: next.telegramChatId,
     lastUpdateId: next.lastUpdateId,
     auditPath: next.auditPath,
+    lockPath: next.lockPath || defaultLockPath(),
     codexWindowProcessName: next.codexWindowProcessName,
     inputMode: normalizeInputMode(next.inputMode),
     codexCommand: next.codexCommand || "codex",

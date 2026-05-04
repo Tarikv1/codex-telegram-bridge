@@ -12,6 +12,7 @@ It mirrors human-facing Codex updates and final answers to Telegram, and it can 
 - Sends Telegram input either through the visible Codex Desktop composer or through `codex exec resume`.
 - Sends requested files from the bound project folder to Telegram.
 - Can mute live status updates while still forwarding final assistant answers.
+- Refuses to start a second local bridge instance, which prevents Telegram polling conflicts.
 - Avoids forwarding tool logs, command output, hidden reasoning, token events, user messages, and raw rollout bodies.
 
 ## Requirements
@@ -96,6 +97,8 @@ Dry run:
 ```powershell
 npm run dry-run
 ```
+
+Run only one bridge process for a Telegram bot token. If you start it twice, the second process exits before polling Telegram and tells you which existing PID owns the local lock.
 
 ## First Use
 
@@ -207,6 +210,8 @@ Only the configured `allowedUserId` can control the bridge. Other Telegram sende
 - `foreground window is ... not Codex`: bring Codex Desktop to the front and retry.
 - `rollout file did not change`: the desktop composer did not accept the input; make sure the target chat is visible and idle.
 - Too many live messages: send `/updates off`.
+- `bridge is already running as PID ...`: stop the existing bridge terminal first, or end that PID if it is stale.
+- Telegram `Conflict: terminated by other getUpdates request`: another bridge or bot process is polling the same token. Stop the duplicate process and start only one bridge.
 - `File request was not completed`: send `/current` to confirm the bound chat has a working folder, then use `/files` before `/file 1`.
 - No Telegram replies: send `/ping`, check that `botToken` and `allowedUserId` are correct, and confirm the bridge process is still running.
 

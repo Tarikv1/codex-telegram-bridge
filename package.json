@@ -1,6 +1,6 @@
 {
   "name": "codex-telegram-bridge",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Local Windows bridge for controlling a Codex desktop chat from Telegram.",
   "private": true,
   "type": "module",

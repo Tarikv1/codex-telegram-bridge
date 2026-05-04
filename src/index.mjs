@@ -32,12 +32,23 @@ import { formatPingResponse } from "./health.mjs";
 import { formatInputModeResponse, parseInputModeArg } from "./input-mode.mjs";
 import { formatUpdatesResponse, parseUpdatesArg, shouldForwardEvent } from "./output-routing.mjs";
 import { waitForFileGrowth } from "./rollout-watch.mjs";
+import { acquireSingleInstanceLock } from "./single-instance.mjs";
 
 const args = new Set(process.argv.slice(2));
 
 async function main() {
   let config = await loadConfig();
   if (args.has("--dry-run")) config = { ...config, dryRun: true };
+  const instanceLock = await acquireSingleInstanceLock({ lockPath: config.lockPath });
+  process.once("exit", () => {
+    instanceLock.release().catch(() => {});
+  });
+  for (const signal of ["SIGINT", "SIGTERM"]) {
+    process.once(signal, async () => {
+      await instanceLock.release().catch(() => {});
+      process.exit(0);
+    });
+  }
 
   const audit = new AuditLog({ logPath: config.auditPath });
   const state = new BridgeState({ paused: config.paused });
